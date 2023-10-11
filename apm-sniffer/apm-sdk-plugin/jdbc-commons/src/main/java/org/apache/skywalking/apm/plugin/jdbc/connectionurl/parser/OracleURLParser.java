@@ -41,6 +41,7 @@ public class OracleURLParser extends AbstractURLParser {
     public static final String SERVICE_NAME_FIELD = "SERVICE_NAME";
     // only use to indexOf TNS url keyword
     private final String upperUrl;
+
     public OracleURLParser(String url) {
         super(url);
         upperUrl = url == null ? null : url.toUpperCase();
