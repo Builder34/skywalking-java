@@ -26,6 +26,7 @@ import org.apache.skywalking.apm.agent.core.conf.Config;
 import org.apache.skywalking.apm.agent.core.conf.dynamic.ConfigurationDiscoveryService;
 import org.apache.skywalking.apm.agent.core.conf.dynamic.watcher.IgnoreSuffixPatternsWatcher;
 import org.apache.skywalking.apm.agent.core.conf.dynamic.watcher.SpanLimitWatcher;
+import org.apache.skywalking.apm.agent.core.conf.dynamic.watcher.SpanLogStackLengthWatcher;
 import org.apache.skywalking.apm.agent.core.remote.GRPCChannelListener;
 import org.apache.skywalking.apm.agent.core.remote.GRPCChannelManager;
 import org.apache.skywalking.apm.agent.core.remote.GRPCChannelStatus;
@@ -42,6 +43,7 @@ public class ContextManagerExtendService implements BootService, GRPCChannelList
     private IgnoreSuffixPatternsWatcher ignoreSuffixPatternsWatcher;
 
     private SpanLimitWatcher spanLimitWatcher;
+    private SpanLogStackLengthWatcher spanLogStackLengthWatcher;
 
     @Override
     public void prepare() {
@@ -53,11 +55,13 @@ public class ContextManagerExtendService implements BootService, GRPCChannelList
         ignoreSuffixArray = Config.Agent.IGNORE_SUFFIX.split(",");
         ignoreSuffixPatternsWatcher = new IgnoreSuffixPatternsWatcher("agent.ignore_suffix", this);
         spanLimitWatcher = new SpanLimitWatcher("agent.span_limit_per_segment");
+        spanLogStackLengthWatcher = new SpanLogStackLengthWatcher("agent.span_tracing_log_stack_length");
 
         ConfigurationDiscoveryService configurationDiscoveryService = ServiceManager.INSTANCE.findService(
             ConfigurationDiscoveryService.class);
         configurationDiscoveryService.registerAgentConfigChangeWatcher(spanLimitWatcher);
         configurationDiscoveryService.registerAgentConfigChangeWatcher(ignoreSuffixPatternsWatcher);
+        configurationDiscoveryService.registerAgentConfigChangeWatcher(spanLogStackLengthWatcher);
 
         handleIgnoreSuffixPatternsChanged();
     }

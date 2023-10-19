@@ -104,6 +104,8 @@ public class Config {
          */
         public static int SPAN_LIMIT_PER_SEGMENT = 300;
 
+        public static int SPAN_TRACING_LOG_STACK_LENGTH = 4000;
+
         /**
          * If true, SkyWalking agent will save all instrumented classes files in `/debugging` folder. SkyWalking team
          * may ask for these files in order to resolve compatible problem.

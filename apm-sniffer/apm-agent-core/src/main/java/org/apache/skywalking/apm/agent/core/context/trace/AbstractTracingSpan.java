@@ -174,7 +174,7 @@ public abstract class AbstractTracingSpan implements AbstractSpan {
                                             .add(new KeyValuePair("message", t.getMessage()))
                                             .add(new KeyValuePair(
                                                 "stack",
-                                                ThrowableTransformer.INSTANCE.convert2String(t, 4000)
+                                                ThrowableTransformer.INSTANCE.convert2String(t, Config.Agent.SPAN_TRACING_LOG_STACK_LENGTH)
                                             ))
                                             .build(System.currentTimeMillis()));
         return this;
