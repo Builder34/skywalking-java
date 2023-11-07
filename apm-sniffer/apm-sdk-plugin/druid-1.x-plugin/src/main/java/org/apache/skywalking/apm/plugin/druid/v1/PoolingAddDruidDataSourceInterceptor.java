@@ -68,6 +68,9 @@ public class PoolingAddDruidDataSourceInterceptor implements StaticMethodsAround
         metricMap.put("connectCount", (DruidDataSourceMBean druidDataSource) -> () -> (double) druidDataSource.getConnectCount());
         metricMap.put("connectError", (DruidDataSourceMBean druidDataSource) -> () -> (double) druidDataSource.getConnectErrorCount());
         metricMap.put("createError", (DruidDataSourceMBean druidDataSource) -> () -> (double) druidDataSource.getCreateErrorCount());
+        metricMap.put("maxCount", (DruidDataSourceMBean druidDataSource) -> () -> (double) druidDataSource.getMaxActive());
+        metricMap.put("maxWait", (DruidDataSourceMBean druidDataSource) -> () -> (double) druidDataSource.getMaxWait());
+
         return metricMap;
     }
 }
