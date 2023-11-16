@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <artifactId>apm-sdk-plugin</artifactId>
+        <groupId>org.apache.skywalking</groupId>
+        <version>8.13.0</version>
+    </parent>
+
+
+    <artifactId>apm-mycat-1.6.x-plugin</artifactId>
+    <packaging>jar</packaging>
+
+    <name>mycat-1.6.x-plugin</name>
+    <url>http://maven.apache.org</url>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.skywalking</groupId>
+            <artifactId>apm-jdbc-commons</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.mycat</groupId>
+            <artifactId>Mycat-server</artifactId>
+            <version>1.6.7.3-release</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/src/lib/Mycat-server-1.6.7.3-release.jar</systemPath>
+        </dependency>
+    </dependencies>
+
+</project>

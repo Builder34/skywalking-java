@@ -127,6 +127,7 @@
         <module>jedis-plugins</module>
         <module>impala-jdbc-2.6.x-plugin</module>
         <module>tomcat-jdbc-7.x-9.x-plugin</module>
+        <module>mycat-1.6.x-plugin</module>
     </modules>
     <packaging>pom</packaging>
 

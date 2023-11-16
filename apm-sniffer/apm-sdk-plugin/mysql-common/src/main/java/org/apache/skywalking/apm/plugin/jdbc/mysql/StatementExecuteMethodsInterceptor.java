@@ -18,6 +18,7 @@
 
 package org.apache.skywalking.apm.plugin.jdbc.mysql;
 
+import org.apache.skywalking.apm.agent.core.context.ContextCarrier;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
 import org.apache.skywalking.apm.agent.core.context.tag.Tags;
 import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
@@ -27,6 +28,7 @@ import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceM
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
 import org.apache.skywalking.apm.plugin.jdbc.SqlBodyUtil;
 import org.apache.skywalking.apm.plugin.jdbc.define.StatementEnhanceInfos;
+import org.apache.skywalking.apm.plugin.jdbc.mysql.util.SqlCommentTraceCarrierInjector;
 import org.apache.skywalking.apm.plugin.jdbc.trace.ConnectionInfo;
 
 import java.lang.reflect.Method;
@@ -34,7 +36,7 @@ import java.lang.reflect.Method;
 public class StatementExecuteMethodsInterceptor implements InstanceMethodsAroundInterceptor {
     @Override
     public final void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments,
-        Class<?>[] argumentsTypes, MethodInterceptResult result) throws Throwable {
+                                   Class<?>[] argumentsTypes, MethodInterceptResult result) throws Throwable {
         StatementEnhanceInfos cacheObject = (StatementEnhanceInfos) objInst.getSkyWalkingDynamicField();
         ConnectionInfo connectInfo = cacheObject.getConnectionInfo();
         /**
@@ -45,9 +47,9 @@ public class StatementExecuteMethodsInterceptor implements InstanceMethodsAround
          * @see JDBCDriverInterceptor#afterMethod(EnhancedInstance, Method, Object[], Class[], Object)
          */
         if (connectInfo != null) {
-
+            ContextCarrier contextCarrier = new ContextCarrier();
             AbstractSpan span = ContextManager.createExitSpan(buildOperationName(connectInfo, method.getName(), cacheObject
-                .getStatementName()), connectInfo.getDatabasePeer());
+                    .getStatementName()), contextCarrier, connectInfo.getDatabasePeer());
             Tags.DB_TYPE.set(span, "sql");
             Tags.DB_INSTANCE.set(span, connectInfo.getDatabaseName());
 
@@ -57,6 +59,7 @@ public class StatementExecuteMethodsInterceptor implements InstanceMethodsAround
              */
             String sql = "";
             if (allArguments.length > 0) {
+                allArguments[0] = SqlCommentTraceCarrierInjector.inject((String) allArguments[0], contextCarrier, connectInfo.getDatabasePeer());
                 sql = (String) allArguments[0];
                 sql = SqlBodyUtil.limitSqlBodySize(sql);
             }
@@ -69,7 +72,7 @@ public class StatementExecuteMethodsInterceptor implements InstanceMethodsAround
 
     @Override
     public final Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments,
-        Class<?>[] argumentsTypes, Object ret) throws Throwable {
+                                    Class<?>[] argumentsTypes, Object ret) throws Throwable {
         StatementEnhanceInfos cacheObject = (StatementEnhanceInfos) objInst.getSkyWalkingDynamicField();
         if (cacheObject.getConnectionInfo() != null) {
             ContextManager.stopSpan();
@@ -79,7 +82,7 @@ public class StatementExecuteMethodsInterceptor implements InstanceMethodsAround
 
     @Override
     public final void handleMethodException(EnhancedInstance objInst, Method method, Object[] allArguments,
-        Class<?>[] argumentsTypes, Throwable t) {
+                                            Class<?>[] argumentsTypes, Throwable t) {
         StatementEnhanceInfos cacheObject = (StatementEnhanceInfos) objInst.getSkyWalkingDynamicField();
         if (cacheObject.getConnectionInfo() != null) {
             ContextManager.activeSpan().log(t);
