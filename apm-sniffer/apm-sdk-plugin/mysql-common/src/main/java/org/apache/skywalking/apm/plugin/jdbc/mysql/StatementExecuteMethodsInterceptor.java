@@ -59,7 +59,7 @@ public class StatementExecuteMethodsInterceptor implements InstanceMethodsAround
              */
             String sql = "";
             if (allArguments.length > 0) {
-                allArguments[0] = SqlCommentTraceCarrierInjector.inject((String) allArguments[0], contextCarrier, connectInfo.getDatabasePeer());
+                allArguments[0] = SqlCommentTraceCarrierInjector.inject((String) allArguments[0], method.getName(), contextCarrier, connectInfo.getDatabasePeer());
                 sql = (String) allArguments[0];
                 sql = SqlBodyUtil.limitSqlBodySize(sql);
             }

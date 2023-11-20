@@ -58,7 +58,7 @@ public class StatementInstrumentation extends AbstractMysqlInstrumentation {
 
                 @Override
                 public boolean isOverrideArgs() {
-                    return false;
+                    return true;
                 }
             }
         };

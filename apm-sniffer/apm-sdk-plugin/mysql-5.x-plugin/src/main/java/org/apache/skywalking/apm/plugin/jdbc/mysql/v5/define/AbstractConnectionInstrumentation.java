@@ -92,7 +92,7 @@ public abstract class AbstractConnectionInstrumentation extends AbstractMysqlIns
 
                 @Override
                 public boolean isOverrideArgs() {
-                    return false;
+                    return true;
                 }
             },
             new InstanceMethodsInterceptPoint() {
@@ -110,7 +110,7 @@ public abstract class AbstractConnectionInstrumentation extends AbstractMysqlIns
 
                 @Override
                 public boolean isOverrideArgs() {
-                    return false;
+                    return true;
                 }
             },
             new InstanceMethodsInterceptPoint() {

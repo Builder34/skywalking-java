@@ -60,7 +60,7 @@ public class PreparedStatementInstrumentation extends AbstractMysqlInstrumentati
 
                 @Override
                 public boolean isOverrideArgs() {
-                    return false;
+                    return true;
                 }
             }
         };

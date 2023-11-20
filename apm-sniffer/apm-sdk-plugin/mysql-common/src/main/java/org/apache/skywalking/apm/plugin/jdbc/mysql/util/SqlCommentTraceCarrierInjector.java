@@ -39,16 +39,15 @@ public class SqlCommentTraceCarrierInjector {
     public final static String TRACE_CARRIER_START_WITH = "/* [sw_trace_carrier:";
     public final static String TRACE_CARRIER_END_WITH = "] */";
 
-    public static String inject(String sql, ContextCarrier contextCarrier, String peer) {
+    public static String inject(String sql, String methodName, ContextCarrier contextCarrier, String peer) {
         if (StringUtil.isNotBlank(sql)) {
             if (!sql.startsWith("/*") && !sql.startsWith("SET") && !sql.startsWith("select @@") && !sql.startsWith("SELECT @@")) {
                 AbstractSpan span = null;
                 if (contextCarrier == null) {
                     contextCarrier = new ContextCarrier();
-                    span = ContextManager.createExitSpan("Driver/Carrier/inject", contextCarrier, StringUtil.isBlank(peer) ? peer : "unknown");
+                    span = ContextManager.createExitSpan("Driver/CarrierInject/" + methodName, contextCarrier, StringUtil.isBlank(peer) ? peer : "unknown");
                     span.setLayer(SpanLayer.DB);
                     Tags.DB_TYPE.set(span, ComponentsDefine.MYCAT.getName());
-                    Tags.DB_STATEMENT.set(span, sql);
                     span.setComponent(ComponentsDefine.MYSQL_JDBC_DRIVER);
                 }
                 ContextManager.inject(contextCarrier);
@@ -61,13 +60,15 @@ public class SqlCommentTraceCarrierInjector {
                         break;
                     }
                 }
+                String injectedSql = TRACE_CARRIER_START_WITH + traceCarrier + TRACE_CARRIER_END_WITH + sql;
                 if (span != null) {
+                    Tags.DB_STATEMENT.set(span, injectedSql);
                     ContextManager.stopSpan();
                 }
                 LOGGER.info("==> inject carrier: peer:{}, traceId:{}, parentEndpoint: {}, parentService:{}, parentServiceInstance:{}, AddressUsedAtClient:{}, spanId:{}",
                         peer, contextCarrier.getTraceId(), contextCarrier.getParentEndpoint(), contextCarrier.getParentService(), contextCarrier.getParentServiceInstance(),
                         contextCarrier.getAddressUsedAtClient(), contextCarrier.getSpanId());
-                return TRACE_CARRIER_START_WITH + traceCarrier + TRACE_CARRIER_END_WITH + sql;
+                return injectedSql;
             }
         }
         return sql;

@@ -51,7 +51,7 @@ public class ConnectionInstrumentation extends AbstractMysqlInstrumentation {
 
                 @Override
                 public boolean isOverrideArgs() {
-                    return false;
+                    return true;
                 }
             },
             new InstanceMethodsInterceptPoint() {
@@ -67,7 +67,7 @@ public class ConnectionInstrumentation extends AbstractMysqlInstrumentation {
 
                 @Override
                 public boolean isOverrideArgs() {
-                    return false;
+                    return true;
                 }
             },
             new InstanceMethodsInterceptPoint() {
@@ -83,7 +83,7 @@ public class ConnectionInstrumentation extends AbstractMysqlInstrumentation {
 
                 @Override
                 public boolean isOverrideArgs() {
-                    return false;
+                    return true;
                 }
             },
             new InstanceMethodsInterceptPoint() {

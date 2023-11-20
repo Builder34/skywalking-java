@@ -22,6 +22,8 @@ import org.apache.skywalking.apm.agent.core.context.ContextManager;
 import org.apache.skywalking.apm.agent.core.context.tag.Tags;
 import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
 import org.apache.skywalking.apm.agent.core.context.trace.SpanLayer;
+import org.apache.skywalking.apm.agent.core.logging.api.ILog;
+import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
@@ -29,28 +31,33 @@ import org.apache.skywalking.apm.plugin.jdbc.JDBCPluginConfig;
 import org.apache.skywalking.apm.plugin.jdbc.PreparedStatementParameterBuilder;
 import org.apache.skywalking.apm.plugin.jdbc.SqlBodyUtil;
 import org.apache.skywalking.apm.plugin.jdbc.define.StatementEnhanceInfos;
+import org.apache.skywalking.apm.plugin.jdbc.mysql.util.SqlCommentTraceCarrierInjector;
 import org.apache.skywalking.apm.plugin.jdbc.trace.ConnectionInfo;
 
 import java.lang.reflect.Method;
 
 public class PreparedStatementExecuteMethodsInterceptor implements InstanceMethodsAroundInterceptor {
 
+    private static final ILog LOGGER = LogManager.getLogger(PreparedStatementExecuteMethodsInterceptor.class);
+
     @Override
     public final void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments,
                                    Class<?>[] argumentsTypes, MethodInterceptResult result) {
         StatementEnhanceInfos cacheObject = (StatementEnhanceInfos) objInst.getSkyWalkingDynamicField();
+
         /**
          * For avoid NPE. In this particular case, Execute sql inside the {@link com.mysql.jdbc.ConnectionImpl} constructor,
          * before the interceptor sets the connectionInfo.
-         * When invoking prepareCall, cacheObject is null. Because it will determine procedures's parameter types by executing sql in mysql 
+         * When invoking prepareCall, cacheObject is null. Because it will determine procedures's parameter types by executing sql in mysql
          * before the interceptor sets the statementEnhanceInfos.
          * @see JDBCDriverInterceptor#afterMethod(EnhancedInstance, Method, Object[], Class[], Object)
          */
-        if (cacheObject != null && cacheObject.getConnectionInfo() != null) {
+        if (cacheObject != null && cacheObject.getConnectionInfo() != null
+                && !cacheObject.getSql().startsWith(SqlCommentTraceCarrierInjector.TRACE_CARRIER_START_WITH)) {
             ConnectionInfo connectInfo = cacheObject.getConnectionInfo();
             AbstractSpan span = ContextManager.createExitSpan(
-                buildOperationName(connectInfo, method.getName(), cacheObject
-                    .getStatementName()), connectInfo.getDatabasePeer());
+                    buildOperationName(connectInfo, method.getName(), cacheObject
+                            .getStatementName()), connectInfo.getDatabasePeer());
             Tags.DB_TYPE.set(span, "sql");
             Tags.DB_INSTANCE.set(span, connectInfo.getDatabaseName());
             Tags.DB_STATEMENT.set(span, SqlBodyUtil.limitSqlBodySize(cacheObject.getSql()));
@@ -73,7 +80,8 @@ public class PreparedStatementExecuteMethodsInterceptor implements InstanceMetho
     public final Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments,
                                     Class<?>[] argumentsTypes, Object ret) {
         StatementEnhanceInfos cacheObject = (StatementEnhanceInfos) objInst.getSkyWalkingDynamicField();
-        if (cacheObject != null && cacheObject.getConnectionInfo() != null) {
+        if (cacheObject != null && cacheObject.getConnectionInfo() != null
+                && !cacheObject.getSql().startsWith(SqlCommentTraceCarrierInjector.TRACE_CARRIER_START_WITH)) {
             ContextManager.stopSpan();
         }
         return ret;
@@ -94,8 +102,8 @@ public class PreparedStatementExecuteMethodsInterceptor implements InstanceMetho
 
     private String getParameterString(Object[] parameters, int maxIndex) {
         return new PreparedStatementParameterBuilder()
-            .setParameters(parameters)
-            .setMaxIndex(maxIndex)
-            .build();
+                .setParameters(parameters)
+                .setMaxIndex(maxIndex)
+                .build();
     }
 }
