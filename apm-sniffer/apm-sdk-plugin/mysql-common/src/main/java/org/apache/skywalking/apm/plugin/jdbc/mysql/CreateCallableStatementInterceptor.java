@@ -33,7 +33,7 @@ public class CreateCallableStatementInterceptor implements InstanceMethodsAround
     public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes,
                              MethodInterceptResult result) throws Throwable {
         ConnectionInfo connectionInfo = (ConnectionInfo) objInst.getSkyWalkingDynamicField();
-        allArguments[0] = SqlCommentTraceCarrierInjector.inject((String) allArguments[0], method.getName(), null, connectionInfo.getDatabasePeer());
+        allArguments[0] = SqlCommentTraceCarrierInjector.inject((String) allArguments[0], method.getName(), null, connectionInfo);
     }
 
     @Override

@@ -31,22 +31,41 @@ public class ContextCarrierHandler {
 
     private static final ILog LOGGER = LogManager.getLogger(ContextCarrierHandler.class);
     public final static String TRACE_CARRIER_START_WITH = "/* [sw_trace_carrier:";
+    //replace,lastIndexOf no need escape
     public final static String TRACE_CARRIER_END_WITH = "] */";
+    //split kwd need escape '*' to '\\*'
+    public final static String TRACE_CARRIER_END_WITH_ESCAPE = "] \\*/";
 
-    public static void extract(ContextCarrier contextCarrier, String carrierSql) throws Throwable {
-        String carrier = carrierSql.substring(0, carrierSql.lastIndexOf(TRACE_CARRIER_END_WITH)).replace(TRACE_CARRIER_START_WITH, "").replace(TRACE_CARRIER_END_WITH, "");
-        LOGGER.info("==> mycat server received contextCarrier is: {}", carrier);
-        if (StringUtil.isNotBlank(carrier)) {
-            CarrierItem items = contextCarrier.items();
-            while (items.hasNext()) {
-                CarrierItem next = items.next();
-                next.setHeadValue(carrier);
-                break;
+    public static String extract(ContextCarrier contextCarrier, String carrierSql) throws Throwable {
+        if (carrierSql.startsWith(TRACE_CARRIER_START_WITH)) {
+
+            String[] carriedAndSql = carrierSql.split(TRACE_CARRIER_END_WITH_ESCAPE);
+            String carrier = carriedAndSql[0].replace(TRACE_CARRIER_START_WITH, "");
+            LOGGER.info("==> mycat server received contextCarrier is: {}", carrier);
+            if (StringUtil.isNotBlank(carrier)) {
+                CarrierItem items = contextCarrier.items();
+                while (items.hasNext()) {
+                    CarrierItem next = items.next();
+                    next.setHeadValue(carrier);
+                    break;
+                }
+                ContextManager.extract(contextCarrier);
+                LOGGER.info("==> extract result: traceId:{}, parentEndpoint: {}, parentService:{}, parentServiceInstance:{}, AddressUsedAtClient:{}, spanId:{}",
+                        contextCarrier.getTraceId(), contextCarrier.getParentEndpoint(), contextCarrier.getParentService(), contextCarrier.getParentServiceInstance(),
+                        contextCarrier.getAddressUsedAtClient(), contextCarrier.getSpanId());
             }
-            ContextManager.extract(contextCarrier);
-            LOGGER.info("==> extract result: traceId:{}, parentEndpoint: {}, parentService:{}, parentServiceInstance:{}, AddressUsedAtClient:{}, spanId:{}",
-                    contextCarrier.getTraceId(), contextCarrier.getParentEndpoint(), contextCarrier.getParentService(), contextCarrier.getParentServiceInstance(),
-                    contextCarrier.getAddressUsedAtClient(), contextCarrier.getSpanId());
+            LOGGER.info("==> mycat server received originalSql is: {}", carriedAndSql[1]);
+            return carriedAndSql[1];
+        } else {
+            return carrierSql;
+        }
+    }
+
+    public static String getOriginalSql(String carrierSql) {
+        if (carrierSql.startsWith(TRACE_CARRIER_START_WITH) && carrierSql.contains(TRACE_CARRIER_END_WITH)) {
+            return carrierSql.split(TRACE_CARRIER_END_WITH_ESCAPE)[1];
+        } else {
+            return carrierSql;
         }
     }
 }

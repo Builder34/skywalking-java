@@ -50,7 +50,7 @@ public class StatementExecuteMethodsInterceptor implements InstanceMethodsAround
             ContextCarrier contextCarrier = new ContextCarrier();
             AbstractSpan span = ContextManager.createExitSpan(buildOperationName(connectInfo, method.getName(), cacheObject
                     .getStatementName()), contextCarrier, connectInfo.getDatabasePeer());
-            Tags.DB_TYPE.set(span, "sql");
+            Tags.DB_TYPE.set(span, connectInfo.getDBType());
             Tags.DB_INSTANCE.set(span, connectInfo.getDatabaseName());
 
             /**
@@ -59,7 +59,7 @@ public class StatementExecuteMethodsInterceptor implements InstanceMethodsAround
              */
             String sql = "";
             if (allArguments.length > 0) {
-                allArguments[0] = SqlCommentTraceCarrierInjector.inject((String) allArguments[0], method.getName(), contextCarrier, connectInfo.getDatabasePeer());
+                allArguments[0] = SqlCommentTraceCarrierInjector.inject((String) allArguments[0], method.getName(), contextCarrier, connectInfo);
                 sql = (String) allArguments[0];
                 sql = SqlBodyUtil.limitSqlBodySize(sql);
             }

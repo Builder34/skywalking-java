@@ -20,7 +20,6 @@ package org.apache.skywalking.apm.plugin.jdbc.mycat.v1;
 import io.mycat.route.RouteResultsetNode;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
 import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
-import org.apache.skywalking.apm.agent.core.context.trace.SpanLayer;
 import org.apache.skywalking.apm.agent.core.logging.api.ILog;
 import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
@@ -44,7 +43,7 @@ public class BackendPhysicalDBNodeGetConnectionInterceptor implements InstanceMe
         if (rrs.getStatement().startsWith(ContextCarrierHandler.TRACE_CARRIER_START_WITH)) {
             AbstractSpan span = ContextManager.createLocalSpan("MyCat/JDBI/" + method.getName());
             span.setComponent(ComponentsDefine.MYCAT);
-            SpanLayer.asDB(span);
+            //SpanLayer.asDB(span);
         }
     }
 

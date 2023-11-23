@@ -44,11 +44,11 @@ public class MySQLConnectionExecuteInterceptor implements InstanceMethodsAroundI
         if (StringUtil.isNotBlank(frontendConnection.getExecuteSql()) && frontendConnection.getExecuteSql().startsWith(ContextCarrierHandler.TRACE_CARRIER_START_WITH)) {
             MySQLConnection mysqlConnection = (MySQLConnection) objInst;
             AbstractSpan span = ContextManager.createExitSpan("MyCat/JDBI/" + method.getName(), mysqlConnection.getHost() + ":" + mysqlConnection.getPort());
-            Tags.DB_TYPE.set(span, "sql");
+            Tags.DB_TYPE.set(span, "Mysql");
             Tags.DB_INSTANCE.set(span, mysqlConnection.getSchema());
-            Tags.DB_STATEMENT.set(span, SqlBodyUtil.limitSqlBodySize(frontendConnection.getExecuteSql()));
+            Tags.DB_STATEMENT.set(span, SqlBodyUtil.limitSqlBodySize(ContextCarrierHandler.getOriginalSql(frontendConnection.getExecuteSql())));
             span.setLayer(SpanLayer.DB);
-            span.setComponent(ComponentsDefine.MYCAT);
+            span.setComponent(ComponentsDefine.MYSQL_JDBC_DRIVER);
         }
     }
 

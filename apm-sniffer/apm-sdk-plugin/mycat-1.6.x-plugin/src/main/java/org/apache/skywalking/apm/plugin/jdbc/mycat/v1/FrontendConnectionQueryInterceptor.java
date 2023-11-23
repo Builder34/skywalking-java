@@ -20,7 +20,8 @@ package org.apache.skywalking.apm.plugin.jdbc.mycat.v1;
 import org.apache.skywalking.apm.agent.core.context.ContextCarrier;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
 import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
-import org.apache.skywalking.apm.agent.core.context.trace.SpanLayer;
+import org.apache.skywalking.apm.agent.core.logging.api.ILog;
+import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
@@ -34,6 +35,9 @@ import java.lang.reflect.Method;
  * FrontendConnectionQueryInterceptor
  */
 public class FrontendConnectionQueryInterceptor implements InstanceMethodsAroundInterceptor {
+
+    private static final ILog LOGGER = LogManager.getLogger(FrontendConnectionQueryInterceptor.class);
+
     @Override
     public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes, MethodInterceptResult result) throws Throwable {
         if (allArguments[0] instanceof String) {
@@ -41,9 +45,11 @@ public class FrontendConnectionQueryInterceptor implements InstanceMethodsAround
             if (StringUtil.isNotBlank(sql) && sql.startsWith(ContextCarrierHandler.TRACE_CARRIER_START_WITH)) {
                 ContextCarrier contextCarrier = new ContextCarrier();
                 AbstractSpan entrySpan = ContextManager.createEntrySpan("MyCat/JDBI/query", contextCarrier);
-                SpanLayer.asDB(entrySpan);
+                //SpanLayer.asDB(entrySpan);
                 entrySpan.setComponent(ComponentsDefine.MYCAT);
-                ContextCarrierHandler.extract(contextCarrier, sql);
+                String originalSql = ContextCarrierHandler.extract(contextCarrier, sql);
+                //Tags.DB_TYPE.set(entrySpan, ComponentsDefine.MYCAT.getName());
+                //Tags.DB_STATEMENT.set(entrySpan, SqlBodyUtil.limitSqlBodySize(originalSql));
             }
         }
     }
@@ -61,6 +67,6 @@ public class FrontendConnectionQueryInterceptor implements InstanceMethodsAround
 
     @Override
     public void handleMethodException(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes, Throwable t) {
-
+        ContextManager.activeSpan().log(t);
     }
 }

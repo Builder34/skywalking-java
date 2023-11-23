@@ -16,8 +16,15 @@
  *
  */
 
-package org.apache.skywalking.apm.plugin.jdbc.mysql;
+package org.apache.skywalking.apm.plugin.jdbc.mysql.v5;
 
+import com.mysql.jdbc.SingleByteCharsetConverter;
+import com.mysql.jdbc.PreparedStatement;
+import com.mysql.jdbc.JDBC42PreparedStatement;
+import com.mysql.jdbc.JDBC4PreparedStatement;
+import com.mysql.jdbc.MySQLConnection;
+import com.mysql.jdbc.DatabaseMetaData;
+import org.apache.skywalking.apm.agent.core.context.ContextCarrier;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
 import org.apache.skywalking.apm.agent.core.context.tag.Tags;
 import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
@@ -34,7 +41,10 @@ import org.apache.skywalking.apm.plugin.jdbc.define.StatementEnhanceInfos;
 import org.apache.skywalking.apm.plugin.jdbc.mysql.util.SqlCommentTraceCarrierInjector;
 import org.apache.skywalking.apm.plugin.jdbc.trace.ConnectionInfo;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.sql.SQLException;
 
 public class PreparedStatementExecuteMethodsInterceptor implements InstanceMethodsAroundInterceptor {
 
@@ -44,6 +54,7 @@ public class PreparedStatementExecuteMethodsInterceptor implements InstanceMetho
     public final void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments,
                                    Class<?>[] argumentsTypes, MethodInterceptResult result) {
         StatementEnhanceInfos cacheObject = (StatementEnhanceInfos) objInst.getSkyWalkingDynamicField();
+        ContextCarrier contextCarrier = new ContextCarrier();
 
         /**
          * For avoid NPE. In this particular case, Execute sql inside the {@link com.mysql.jdbc.ConnectionImpl} constructor,
@@ -56,10 +67,10 @@ public class PreparedStatementExecuteMethodsInterceptor implements InstanceMetho
             ConnectionInfo connectInfo = cacheObject.getConnectionInfo();
             AbstractSpan span = ContextManager.createExitSpan(
                     buildOperationName(connectInfo, method.getName(), cacheObject
-                            .getStatementName()), connectInfo.getDatabasePeer());
+                            .getStatementName()), contextCarrier, connectInfo.getDatabasePeer());
             Tags.DB_TYPE.set(span, connectInfo.getDBType());
             Tags.DB_INSTANCE.set(span, connectInfo.getDatabaseName());
-            Tags.DB_STATEMENT.set(span, SqlBodyUtil.limitSqlBodySize(SqlCommentTraceCarrierInjector.getOriginalSql(cacheObject.getSql())));
+            Tags.DB_STATEMENT.set(span, SqlBodyUtil.limitSqlBodySize(cacheObject.getSql()));
             span.setComponent(connectInfo.getComponent());
             if (JDBCPluginConfig.Plugin.JDBC.TRACE_SQL_PARAMETERS) {
                 final Object[] parameters = cacheObject.getParameters();
@@ -69,9 +80,67 @@ public class PreparedStatementExecuteMethodsInterceptor implements InstanceMetho
                     Tags.SQL_PARAMETERS.set(span, parameterString);
                 }
             }
-
             SpanLayer.asDB(span);
+            String injectedSql = SqlCommentTraceCarrierInjector.inject(cacheObject.getSql(), method.getName(), contextCarrier, connectInfo);
+            //change original sql to add carrier info in sql body with comment
+            try {
+                LOGGER.info("==> objInst class name: {}", objInst.getClass().getName());
+                Class<?> preparedStatementClass = getPreparedStatementClass(objInst);
+                Field originalSqlField = preparedStatementClass.getDeclaredField("originalSql");
+                originalSqlField.setAccessible(true);
+                originalSqlField.set(objInst, injectedSql);
+                PreparedStatement.ParseInfo parseInfo = getParseInfo(objInst, preparedStatementClass, injectedSql);
+                Field parseInfoField = preparedStatementClass.getDeclaredField("parseInfo");
+                parseInfoField.setAccessible(true);
+                parseInfoField.set(objInst, parseInfo);
+                Method initializeFromParseInfoMethod = preparedStatementClass.getDeclaredMethod("initializeFromParseInfo");
+                initializeFromParseInfoMethod.setAccessible(true);
+                //initializeFromParseInfoMethod.invoke(objInst);
+                LOGGER.info("==> after reflect preparedStatement sql: {}", ((PreparedStatement) objInst).getPreparedSql());
+            } catch (Exception e) {
+                LOGGER.error(e, "reflect preparedStatement originalSql to set carrierInject sql failed: {}", e.getMessage());
+            }
         }
+    }
+
+    private static PreparedStatement.ParseInfo getParseInfo(EnhancedInstance objInst, Class<?> preparedStatementClass, String injectedSql) throws NoSuchFieldException, SQLException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        Field dbmdField = preparedStatementClass.getDeclaredField("dbmd");
+        Class<?> statementImplClassSuperclass = preparedStatementClass.getSuperclass();
+        Field connectionField = statementImplClassSuperclass.getDeclaredField("connection");
+        Field charEncodingField = statementImplClassSuperclass.getDeclaredField("charEncoding");
+        Field charConverterField = statementImplClassSuperclass.getDeclaredField("charConverter");
+        connectionField.setAccessible(true);
+        dbmdField.setAccessible(true);
+        charEncodingField.setAccessible(true);
+        charConverterField.setAccessible(true);
+        MySQLConnection connection = (MySQLConnection) connectionField.get(objInst);
+        DatabaseMetaData dbmd = (DatabaseMetaData) dbmdField.get(objInst);
+        String charEncoding = (String) charEncodingField.get(objInst);
+        SingleByteCharsetConverter charConverter = (SingleByteCharsetConverter) charConverterField.get(objInst);
+        return new PreparedStatement.ParseInfo(injectedSql, connection, dbmd, charEncoding, charConverter, true);
+    }
+
+    private static Class<?> getPreparedStatementClass(EnhancedInstance objInst) {
+        Class<?> preparedStatementClass;
+        boolean hasJDBC42PreparedStatement = false;
+        try {
+            if (objInst instanceof JDBC42PreparedStatement) {
+                hasJDBC42PreparedStatement = true;
+            }
+        } catch (NoClassDefFoundError error) {
+            //do not thing.
+        }
+        if (hasJDBC42PreparedStatement) {
+            JDBC42PreparedStatement preparedStatement = (JDBC42PreparedStatement) objInst;
+            preparedStatementClass = preparedStatement.getClass().getSuperclass().getSuperclass();
+        } else if (objInst instanceof JDBC4PreparedStatement) {
+            JDBC4PreparedStatement preparedStatement = (JDBC4PreparedStatement) objInst;
+            preparedStatementClass = preparedStatement.getClass().getSuperclass();
+        } else {
+            PreparedStatement preparedStatement = (PreparedStatement) objInst;
+            preparedStatementClass = preparedStatement.getClass();
+        }
+        return preparedStatementClass;
     }
 
     @Override
@@ -81,6 +150,7 @@ public class PreparedStatementExecuteMethodsInterceptor implements InstanceMetho
         if (cacheObject != null && cacheObject.getConnectionInfo() != null) {
             ContextManager.stopSpan();
         }
+        LOGGER.info("==> preparedStatement execute afterMethod sql: {}", ((PreparedStatement) objInst).getPreparedSql());
         return ret;
     }
 
