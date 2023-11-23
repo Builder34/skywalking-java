@@ -66,9 +66,9 @@ public class SqlCommentTraceCarrierInjector {
                         span.setComponent(ComponentsDefine.MYSQL_JDBC_DRIVER);
                         Tags.DB_STATEMENT.set(span, sql);
                         ContextManager.stopSpan();
-                        String injectedSql = generateNextExitSpanCarrier(span) + sql;
+                        String injectedSql = generateNextExitSpanCarrier(span, connectionInfo.getDatabasePeer()) + sql;
                         LOGGER.info("==> after injected sql is: {}", injectedSql);
-                        return generateNextExitSpanCarrier(span) + sql;
+                        return injectedSql;
 
                     }
                 } catch (Exception e) {
@@ -81,7 +81,7 @@ public class SqlCommentTraceCarrierInjector {
         return sql;
     }
 
-    private static String generateNextExitSpanCarrier(AbstractSpan localSpan) {
+    private static String generateNextExitSpanCarrier(AbstractSpan localSpan, String peer) {
         String traceId = ContextManager.getGlobalTraceId();
         String segmentId = ContextManager.getSegmentId();
         int spanId = localSpan.getSpanId() + 1;
@@ -97,7 +97,7 @@ public class SqlCommentTraceCarrierInjector {
                 Base64.encode(serviceName),
                 Base64.encode(instanceName),
                 Base64.encode(primaryEndpointName == null ? "" : primaryEndpointName),
-                Base64.encode("mysql")
+                Base64.encode(peer)
         );
         return TRACE_CARRIER_START_WITH + swTraceCarrier + TRACE_CARRIER_END_WITH;
     }
