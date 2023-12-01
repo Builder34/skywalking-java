@@ -81,7 +81,7 @@ public class PreparedStatementExecuteMethodsInterceptor implements InstanceMetho
                 }
             }
             SpanLayer.asDB(span);
-            String injectedSql = SqlCommentTraceCarrierInjector.inject(cacheObject.getSql(), method.getName(), contextCarrier, connectInfo);
+            String injectedSql = SqlCommentTraceCarrierInjector.inject(cacheObject.getSql(), objInst.getClass().getName(), method.getName(), contextCarrier, connectInfo);
             //change original sql to add carrier info in sql body with comment
             try {
                 LOGGER.info("==> objInst class name: {}", objInst.getClass().getName());

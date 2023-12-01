@@ -19,6 +19,7 @@ package org.apache.skywalking.apm.plugin.jdbc.mycat.v1;
 
 import org.apache.skywalking.apm.agent.core.context.ContextCarrier;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
+import org.apache.skywalking.apm.agent.core.context.tag.Tags;
 import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
 import org.apache.skywalking.apm.agent.core.logging.api.ILog;
 import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
@@ -26,6 +27,7 @@ import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedI
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
 import org.apache.skywalking.apm.network.trace.component.ComponentsDefine;
+import org.apache.skywalking.apm.plugin.jdbc.SqlBodyUtil;
 import org.apache.skywalking.apm.plugin.jdbc.mycat.v1.utils.ContextCarrierHandler;
 import org.apache.skywalking.apm.util.StringUtil;
 
@@ -49,18 +51,24 @@ public class FrontendConnectionQueryInterceptor implements InstanceMethodsAround
                 entrySpan.setComponent(ComponentsDefine.MYCAT);
                 String originalSql = ContextCarrierHandler.extract(contextCarrier, sql);
                 //Tags.DB_TYPE.set(entrySpan, ComponentsDefine.MYCAT.getName());
-                //Tags.DB_STATEMENT.set(entrySpan, SqlBodyUtil.limitSqlBodySize(originalSql));
+                Tags.DB_STATEMENT.set(entrySpan, SqlBodyUtil.limitSqlBodySize(originalSql));
+                LOGGER.info("==> after extract:, traceId: {}, spanId:{}, ContextManager.getSpanId(): {}, activeSpanId:{}", ContextManager.getGlobalTraceId(), entrySpan.getSpanId(), ContextManager.getSpanId(), ContextManager.activeSpan().getSpanId());
             }
         }
     }
 
     @Override
     public Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes, Object ret) throws Throwable {
+        LOGGER.info("==> after query method:, traceId: {}, ContextManager.getSpanId(): {}, activeSpanId:{}", ContextManager.getGlobalTraceId(), ContextManager.getSpanId(), ContextManager.activeSpan().getSpanId());
         if (allArguments[0] instanceof String) {
             String sql = (String) allArguments[0];
             if (StringUtil.isNotBlank(sql) && sql.startsWith(ContextCarrierHandler.TRACE_CARRIER_START_WITH)) {
                 ContextManager.stopSpan();
+            } else {
+                LOGGER.info("==> can't stop span, not need, sql:{}", sql);
             }
+        } else {
+            LOGGER.info("==> can't stop span, caused by query method no has sql; allArguments[0]: {}", allArguments[0]);
         }
         return ret;
     }

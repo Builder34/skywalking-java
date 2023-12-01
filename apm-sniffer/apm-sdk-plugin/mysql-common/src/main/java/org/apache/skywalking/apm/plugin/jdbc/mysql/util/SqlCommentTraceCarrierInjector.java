@@ -43,10 +43,11 @@ public class SqlCommentTraceCarrierInjector {
     public final static String TRACE_CARRIER_END_WITH = "] */";
     public final static String TRACE_CARRIER_END_WITH_ESCAPE = "] \\*/";
 
-    public static String inject(String sql, String methodName, ContextCarrier contextCarrier, ConnectionInfo connectionInfo) {
+    public static String inject(String sql, String objInstName, String methodName, ContextCarrier contextCarrier, ConnectionInfo connectionInfo) {
         if (StringUtil.isNotBlank(sql)) {
             if (!sql.startsWith("/*") && !sql.startsWith("SET") && !sql.startsWith("select @@") && !sql.startsWith("SELECT @@")) {
                 try {
+                    String injectedSql;
                     if (contextCarrier != null) {
                         ContextManager.inject(contextCarrier);
                         CarrierItem next = contextCarrier.items();
@@ -58,7 +59,8 @@ public class SqlCommentTraceCarrierInjector {
                                 break;
                             }
                         }
-                        return TRACE_CARRIER_START_WITH + traceCarrier + TRACE_CARRIER_END_WITH + sql;
+                        injectedSql = TRACE_CARRIER_START_WITH + traceCarrier + TRACE_CARRIER_END_WITH + sql;
+                        LOGGER.info("==> from: {}:{} [forecast] PreparedStatement execute span: traceId:{}, segmentId:{}, spanId:{}", objInstName, methodName, ContextManager.getGlobalTraceId(), ContextManager.getSegmentId(), ContextManager.getSpanId());
                     } else {
                         AbstractSpan span = ContextManager.createLocalSpan(connectionInfo.getDBType() + "/Connection/" + methodName);
                         span.setLayer(SpanLayer.DB);
@@ -66,11 +68,10 @@ public class SqlCommentTraceCarrierInjector {
                         span.setComponent(ComponentsDefine.MYSQL_JDBC_DRIVER);
                         Tags.DB_STATEMENT.set(span, sql);
                         ContextManager.stopSpan();
-                        String injectedSql = generateNextExitSpanCarrier(span, connectionInfo.getDatabasePeer()) + sql;
-                        LOGGER.info("==> after injected sql is: {}", injectedSql);
-                        return injectedSql;
-
+                        injectedSql = generateNextExitSpanCarrier(objInstName, methodName, span, connectionInfo.getDatabasePeer()) + sql;
                     }
+                    LOGGER.info("==> after injected sql is: {}", injectedSql);
+                    return injectedSql;
                 } catch (Exception e) {
                     LOGGER.error("carrier inject failed:", e);
                     return sql;
@@ -81,7 +82,7 @@ public class SqlCommentTraceCarrierInjector {
         return sql;
     }
 
-    private static String generateNextExitSpanCarrier(AbstractSpan localSpan, String peer) {
+    private static String generateNextExitSpanCarrier(String objInstName, String methodName, AbstractSpan localSpan, String peer) {
         String traceId = ContextManager.getGlobalTraceId();
         String segmentId = ContextManager.getSegmentId();
         int spanId = localSpan.getSpanId() + 1;
@@ -99,6 +100,7 @@ public class SqlCommentTraceCarrierInjector {
                 Base64.encode(primaryEndpointName == null ? "" : primaryEndpointName),
                 Base64.encode(peer)
         );
+        LOGGER.info("==> from: {}:{} [forecast] PreparedStatement execute span: traceId:{}, segmentId:{}, spanId:{}", objInstName, methodName, ContextManager.getGlobalTraceId(), ContextManager.getSegmentId(), spanId);
         return TRACE_CARRIER_START_WITH + swTraceCarrier + TRACE_CARRIER_END_WITH;
     }
 

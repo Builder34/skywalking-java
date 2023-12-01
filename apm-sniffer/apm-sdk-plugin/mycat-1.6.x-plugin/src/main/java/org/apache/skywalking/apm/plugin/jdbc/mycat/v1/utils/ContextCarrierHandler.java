@@ -50,8 +50,8 @@ public class ContextCarrierHandler {
                     break;
                 }
                 ContextManager.extract(contextCarrier);
-                LOGGER.info("==> extract result: traceId:{}, parentEndpoint: {}, parentService:{}, parentServiceInstance:{}, AddressUsedAtClient:{}, spanId:{}",
-                        contextCarrier.getTraceId(), contextCarrier.getParentEndpoint(), contextCarrier.getParentService(), contextCarrier.getParentServiceInstance(),
+                LOGGER.info("==> extract result: traceId:{}, segmentId:{}, parentEndpoint: {}, parentService:{}, parentServiceInstance:{}, AddressUsedAtClient:{}, spanId:{}",
+                        contextCarrier.getTraceId(), contextCarrier.getTraceSegmentId(), contextCarrier.getParentEndpoint(), contextCarrier.getParentService(), contextCarrier.getParentServiceInstance(),
                         contextCarrier.getAddressUsedAtClient(), contextCarrier.getSpanId());
             }
             LOGGER.info("==> mycat server received originalSql is: {}", carriedAndSql[1]);

@@ -71,6 +71,7 @@ public class PreparedStatementExecuteMethodsInterceptor implements InstanceMetho
             }
 
             SpanLayer.asDB(span);
+            LOGGER.info("==> PreparedStatement execute span: traceId:{}, segmentId:{}, spanId:{}", ContextManager.getGlobalTraceId(), ContextManager.getSegmentId(), span.getSpanId());
         }
     }
 
