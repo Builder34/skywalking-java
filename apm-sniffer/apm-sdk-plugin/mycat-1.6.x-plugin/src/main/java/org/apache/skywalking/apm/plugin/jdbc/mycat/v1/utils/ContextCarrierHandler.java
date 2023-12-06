@@ -19,7 +19,6 @@ package org.apache.skywalking.apm.plugin.jdbc.mycat.v1.utils;
 
 import org.apache.skywalking.apm.agent.core.context.CarrierItem;
 import org.apache.skywalking.apm.agent.core.context.ContextCarrier;
-import org.apache.skywalking.apm.agent.core.context.ContextManager;
 import org.apache.skywalking.apm.agent.core.logging.api.ILog;
 import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
 import org.apache.skywalking.apm.util.StringUtil;
@@ -49,7 +48,7 @@ public class ContextCarrierHandler {
                     next.setHeadValue(carrier);
                     break;
                 }
-                ContextManager.extract(contextCarrier);
+                //ContextManager.extract(contextCarrier);
                 LOGGER.info("==> extract result: traceId:{}, segmentId:{}, parentEndpoint: {}, parentService:{}, parentServiceInstance:{}, AddressUsedAtClient:{}, spanId:{}",
                         contextCarrier.getTraceId(), contextCarrier.getTraceSegmentId(), contextCarrier.getParentEndpoint(), contextCarrier.getParentService(), contextCarrier.getParentServiceInstance(),
                         contextCarrier.getAddressUsedAtClient(), contextCarrier.getSpanId());

@@ -46,10 +46,10 @@ public class FrontendConnectionQueryInterceptor implements InstanceMethodsAround
             String sql = (String) allArguments[0];
             if (StringUtil.isNotBlank(sql) && sql.startsWith(ContextCarrierHandler.TRACE_CARRIER_START_WITH)) {
                 ContextCarrier contextCarrier = new ContextCarrier();
+                String originalSql = ContextCarrierHandler.extract(contextCarrier, sql);
                 AbstractSpan entrySpan = ContextManager.createEntrySpan("MyCat/JDBI/query", contextCarrier);
                 //SpanLayer.asDB(entrySpan);
                 entrySpan.setComponent(ComponentsDefine.MYCAT);
-                String originalSql = ContextCarrierHandler.extract(contextCarrier, sql);
                 //Tags.DB_TYPE.set(entrySpan, ComponentsDefine.MYCAT.getName());
                 Tags.DB_STATEMENT.set(entrySpan, SqlBodyUtil.limitSqlBodySize(originalSql));
                 LOGGER.info("==> after extract:, traceId: {}, spanId:{}, ContextManager.getSpanId(): {}, activeSpanId:{}", ContextManager.getGlobalTraceId(), entrySpan.getSpanId(), ContextManager.getSpanId(), ContextManager.activeSpan().getSpanId());
