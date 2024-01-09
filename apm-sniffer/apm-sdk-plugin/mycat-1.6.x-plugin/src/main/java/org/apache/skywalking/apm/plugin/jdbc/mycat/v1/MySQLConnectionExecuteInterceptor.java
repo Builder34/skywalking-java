@@ -20,9 +20,12 @@ package org.apache.skywalking.apm.plugin.jdbc.mycat.v1;
 import io.mycat.backend.mysql.nio.MySQLConnection;
 import io.mycat.server.ServerConnection;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
+import org.apache.skywalking.apm.agent.core.context.ContextSnapshot;
 import org.apache.skywalking.apm.agent.core.context.tag.Tags;
 import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
 import org.apache.skywalking.apm.agent.core.context.trace.SpanLayer;
+import org.apache.skywalking.apm.agent.core.logging.api.ILog;
+import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
@@ -38,6 +41,8 @@ import java.lang.reflect.Method;
  */
 public class MySQLConnectionExecuteInterceptor implements InstanceMethodsAroundInterceptor {
 
+    private static final ILog LOGGER = LogManager.getLogger(MySQLConnectionExecuteInterceptor.class);
+
     @Override
     public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes, MethodInterceptResult result) throws Throwable {
         ServerConnection frontendConnection = (ServerConnection) allArguments[1];
@@ -49,14 +54,29 @@ public class MySQLConnectionExecuteInterceptor implements InstanceMethodsAroundI
             Tags.DB_STATEMENT.set(span, SqlBodyUtil.limitSqlBodySize(ContextCarrierHandler.getOriginalSql(frontendConnection.getExecuteSql())));
             span.setLayer(SpanLayer.DB);
             span.setComponent(ComponentsDefine.MYSQL_JDBC_DRIVER);
+
+            ContextSnapshot snapshot = (ContextSnapshot) ((EnhancedInstance) frontendConnection).getSkyWalkingDynamicField();
+            if (snapshot != null) {
+                ContextManager.continued(snapshot);
+            }
+            LOGGER.info("==> createExitSpan traceId: {}, spanId: {}, executeSql: {}", ContextManager.getGlobalTraceId(), ContextManager.getSpanId(), frontendConnection.getExecuteSql());
+        } else {
+            LOGGER.info("==> traceId: {}, spanId: {}, executeSql: {}", ContextManager.getGlobalTraceId(), ContextManager.getSpanId(), frontendConnection.getExecuteSql());
         }
     }
 
     @Override
     public Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes, Object ret) throws Throwable {
         ServerConnection frontendConnection = (ServerConnection) allArguments[1];
+
+        if (frontendConnection.getExecuteSql().contains("insert into ord_user_order")) {
+            LOGGER.info("==> currentThread: {}", Thread.currentThread().getName());
+        }
         if (StringUtil.isNotBlank(frontendConnection.getExecuteSql()) && frontendConnection.getExecuteSql().startsWith(ContextCarrierHandler.TRACE_CARRIER_START_WITH)) {
             ContextManager.stopSpan();
+            LOGGER.info("==> stopSpan traceId: {}, spanId: {}, executeSql: {}", ContextManager.getGlobalTraceId(), ContextManager.getSpanId(), frontendConnection.getExecuteSql());
+        } else {
+            LOGGER.info("==> traceId: {}, spanId: {}, executeSql: {}", ContextManager.getGlobalTraceId(), ContextManager.getSpanId(), frontendConnection.getExecuteSql());
         }
         return ret;
     }

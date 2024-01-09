@@ -52,14 +52,16 @@ public class FrontendConnectionQueryInterceptor implements InstanceMethodsAround
                 entrySpan.setComponent(ComponentsDefine.MYCAT);
                 //Tags.DB_TYPE.set(entrySpan, ComponentsDefine.MYCAT.getName());
                 Tags.DB_STATEMENT.set(entrySpan, SqlBodyUtil.limitSqlBodySize(originalSql));
-                LOGGER.info("==> after extract:, traceId: {}, spanId:{}, ContextManager.getSpanId(): {}, activeSpanId:{}", ContextManager.getGlobalTraceId(), entrySpan.getSpanId(), ContextManager.getSpanId(), ContextManager.activeSpan().getSpanId());
+                LOGGER.info("==> after extract:, traceId: {}, spanId:{}, ContextManager.getSpanId(): {}", ContextManager.getGlobalTraceId(), entrySpan.getSpanId(), ContextManager.getSpanId());
+
+                objInst.setSkyWalkingDynamicField(ContextManager.capture());
             }
         }
     }
 
     @Override
     public Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes, Object ret) throws Throwable {
-        LOGGER.info("==> after query method:, traceId: {}, ContextManager.getSpanId(): {}, activeSpanId:{}", ContextManager.getGlobalTraceId(), ContextManager.getSpanId(), ContextManager.activeSpan().getSpanId());
+        LOGGER.info("==> after query method:, traceId: {}, ContextManager.getSpanId(): {}", ContextManager.getGlobalTraceId(), ContextManager.getSpanId());
         if (allArguments[0] instanceof String) {
             String sql = (String) allArguments[0];
             if (StringUtil.isNotBlank(sql) && sql.startsWith(ContextCarrierHandler.TRACE_CARRIER_START_WITH)) {
