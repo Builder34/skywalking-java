@@ -68,10 +68,6 @@ public class MySQLConnectionExecuteInterceptor implements InstanceMethodsAroundI
     @Override
     public Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes, Object ret) throws Throwable {
         ServerConnection frontendConnection = (ServerConnection) allArguments[1];
-
-        if (frontendConnection.getExecuteSql().contains("insert into ord_user_order")) {
-            LOGGER.info("==> currentThread: {}", Thread.currentThread().getName());
-        }
         if (StringUtil.isNotBlank(frontendConnection.getExecuteSql()) && frontendConnection.getExecuteSql().startsWith(ContextCarrierHandler.TRACE_CARRIER_START_WITH)) {
             ContextManager.stopSpan();
             LOGGER.info("==> stopSpan traceId: {}, spanId: {}, executeSql: {}", ContextManager.getGlobalTraceId(), ContextManager.getSpanId(), frontendConnection.getExecuteSql());
