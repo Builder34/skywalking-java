@@ -31,11 +31,11 @@ import static org.apache.skywalking.apm.agent.core.plugin.match.NameMatch.byName
 /**
  * FrontendConnectionInstrumentation
  */
-public class FrontendConnectionInstrumentation extends ClassInstanceMethodsEnhancePluginDefine {
+public class ServerConnectionInstrumentation extends ClassInstanceMethodsEnhancePluginDefine {
 
-    private static final String ENHANCE_CLASS = "io.mycat.net.FrontendConnection";
-    private static final String ENHANCE_METHOD = "query";
-    private static final String INTERCEPTOR_CLASS = "org.apache.skywalking.apm.plugin.jdbc.mycat.v1.FrontendConnectionQueryInterceptor";
+    private static final String ENHANCE_CLASS = "io.mycat.server.ServerConnection";
+    private static final String ENHANCE_METHOD = "execute";
+    private static final String INTERCEPTOR_CLASS = "org.apache.skywalking.apm.plugin.jdbc.mycat.v1.ServerConnectionExecuteInterceptor";
 
     @Override
     protected ClassMatch enhanceClass() {

@@ -17,42 +17,44 @@
 
 package org.apache.skywalking.apm.plugin.jdbc.mycat.v1;
 
-import org.apache.skywalking.apm.agent.core.context.ContextManager;
-import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
+import io.mycat.backend.mysql.nio.MySQLConnection;
+import io.mycat.backend.mysql.nio.MySQLConnectionHandler;
+import org.apache.skywalking.apm.agent.core.logging.api.ILog;
+import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
-import org.apache.skywalking.apm.network.trace.component.ComponentsDefine;
 import org.apache.skywalking.apm.plugin.jdbc.mycat.v1.bean.MycatSpanInfo;
 
 import java.lang.reflect.Method;
 
-/**
- * MySQLConnectionCloseInterceptor
- */
-public class MySQLConnectionCloseInterceptor implements InstanceMethodsAroundInterceptor {
+public class MySQLConnectionHandlerInterceptor implements InstanceMethodsAroundInterceptor {
+
+    private static final ILog LOGGER = LogManager.getLogger(MySQLConnectionHandlerInterceptor.class);
 
     @Override
     public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes, MethodInterceptResult result) throws Throwable {
-        AbstractSpan span = ContextManager.createLocalSpan("MyCat/JDBI/" + method.getName());
-        span.setComponent(ComponentsDefine.MYCAT);
-        MycatSpanInfo mycatSpanInfo = (MycatSpanInfo) objInst.getSkyWalkingDynamicField();
-        if (mycatSpanInfo != null) {
-            ContextManager.continued(mycatSpanInfo.getContextSnapshot());
-        }
+
     }
 
     @Override
     public Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes, Object ret) throws Throwable {
-        if (!"N/A".equals(ContextManager.getGlobalTraceId()) && ContextManager.activeSpan() != null) {
-            ContextManager.stopSpan();
+        MySQLConnection mySQLConnection = ((MySQLConnectionHandler) objInst).getSource();
+        Object mysqlConnectionSkDF = ((EnhancedInstance) mySQLConnection).getSkyWalkingDynamicField();
+        if (mysqlConnectionSkDF != null) {
+            MycatSpanInfo mycatSpanInfo = (MycatSpanInfo) mysqlConnectionSkDF;
+            mycatSpanInfo.getSpan().asyncFinish();
+            objInst.setSkyWalkingDynamicField(null);
         }
         return ret;
     }
 
     @Override
     public void handleMethodException(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes, Throwable t) {
-        ContextManager.activeSpan().errorOccurred().log(t);
+        Object mysqlConnectionSkDF = ((EnhancedInstance) ((MySQLConnectionHandler) objInst).getSource()).getSkyWalkingDynamicField();
+        if (mysqlConnectionSkDF != null) {
+            MycatSpanInfo mycatSpanInfo = (MycatSpanInfo) mysqlConnectionSkDF;
+            mycatSpanInfo.getSpan().log(t);
+        }
     }
-
 }

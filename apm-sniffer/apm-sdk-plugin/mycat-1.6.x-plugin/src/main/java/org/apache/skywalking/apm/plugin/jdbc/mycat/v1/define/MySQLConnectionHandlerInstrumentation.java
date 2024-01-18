@@ -26,22 +26,20 @@ import org.apache.skywalking.apm.agent.core.plugin.match.ClassMatch;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
-import static org.apache.skywalking.apm.agent.core.plugin.match.HierarchyMatch.byHierarchyMatch;
+import static org.apache.skywalking.apm.agent.core.plugin.match.NameMatch.byName;
 
 /**
  * MySQLConnectionInstrumentation
  */
-public class MySQLConnectionInstrumentation extends ClassInstanceMethodsEnhancePluginDefine {
+public class MySQLConnectionHandlerInstrumentation extends ClassInstanceMethodsEnhancePluginDefine {
 
-    private static final String ENHANCE_CLASS = "io.mycat.net.AbstractConnection";
-    private static final String CLOSE_METHOD = "close";
-    private static final String EXECUTE_METHOD = "execute";
-    private static final String CLOSE_INTERCEPTOR_CLASS = "org.apache.skywalking.apm.plugin.jdbc.mycat.v1.MySQLConnectionCloseInterceptor";
-    private static final String EXECUTE_INTERCEPTOR_CLASS = "org.apache.skywalking.apm.plugin.jdbc.mycat.v1.MySQLConnectionExecuteInterceptor";
+    private static final String ENHANCE_CLASS = "io.mycat.backend.mysql.nio.MySQLConnectionHandler";
+    private static final String HANDLE_METHOD = "handle";
+    private static final String HANDLE_INTERCEPTOR_CLASS = "org.apache.skywalking.apm.plugin.jdbc.mycat.v1.MySQLConnectionHandlerInterceptor";
 
     @Override
     protected ClassMatch enhanceClass() {
-        return byHierarchyMatch(ENHANCE_CLASS);
+        return byName(ENHANCE_CLASS);
     }
 
     @Override
@@ -52,36 +50,21 @@ public class MySQLConnectionInstrumentation extends ClassInstanceMethodsEnhanceP
     @Override
     public InstanceMethodsInterceptPoint[] getInstanceMethodsInterceptPoints() {
         return new InstanceMethodsInterceptPoint[]{new InstanceMethodsInterceptPoint() {
-            @Override
-            public ElementMatcher<MethodDescription> getMethodsMatcher() {
-                return named(CLOSE_METHOD).and(takesArguments(1));
-            }
+                @Override
+                public ElementMatcher<MethodDescription> getMethodsMatcher() {
+                    return named(HANDLE_METHOD).and(takesArguments(1));
+                }
 
-            @Override
-            public String getMethodsInterceptor() {
-                return CLOSE_INTERCEPTOR_CLASS;
-            }
+                @Override
+                public String getMethodsInterceptor() {
+                    return HANDLE_INTERCEPTOR_CLASS;
+                }
 
-            @Override
-            public boolean isOverrideArgs() {
-                return false;
+                @Override
+                public boolean isOverrideArgs() {
+                    return false;
+                }
             }
-        }, new InstanceMethodsInterceptPoint() {
-            @Override
-            public ElementMatcher<MethodDescription> getMethodsMatcher() {
-                return named(EXECUTE_METHOD).and(takesArguments(3));
-            }
-
-            @Override
-            public String getMethodsInterceptor() {
-                return EXECUTE_INTERCEPTOR_CLASS;
-            }
-
-            @Override
-            public boolean isOverrideArgs() {
-                return false;
-            }
-        }
         };
     }
 }

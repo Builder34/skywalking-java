@@ -17,3 +17,5 @@
 mycat-1.6.x=org.apache.skywalking.apm.plugin.jdbc.mycat.v1.define.FrontendConnectionInstrumentation
 mycat-1.6.x=org.apache.skywalking.apm.plugin.jdbc.mycat.v1.define.BackendPhysicalDBNodeInstrumentation
 mycat-1.6.x=org.apache.skywalking.apm.plugin.jdbc.mycat.v1.define.MySQLConnectionInstrumentation
+mycat-1.6.x=org.apache.skywalking.apm.plugin.jdbc.mycat.v1.define.ServerConnectionInstrumentation
+mycat-1.6.x=org.apache.skywalking.apm.plugin.jdbc.mycat.v1.define.MySQLConnectionHandlerInstrumentation
